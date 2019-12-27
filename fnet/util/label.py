@@ -28,7 +28,7 @@ class Range:
     __max = 0
 
     def __init__(self, min_value: Union[float, int], max_value: Union[float, int]):
-        assert max_value >= min_value, "Max value less than min value"
+        assert max_value > min_value, "Max value less than min value: {}<{}".format(max_value, min_value)
         self.min_value = min_value
         self.max_value = max_value
 
@@ -107,6 +107,22 @@ class Box:
     @property
     def area(self):
         return self.width * self.height
+
+    @property
+    def top(self):
+        return self.y_range.min_value
+
+    @property
+    def bottom(self):
+        return self.y_range.max_value
+
+    @property
+    def left(self):
+        return self.x_range.min_value
+
+    @property
+    def right(self):
+        return self.x_range.max_value
 
 
 class ScoredBox(Box):
