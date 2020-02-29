@@ -29,40 +29,52 @@ class MTCNNLoss(nn.Module):
         self.w_bbox = w_bbox
         self.w_landmark = w_landmark
 
-    def forward(self, y_pred, y_real):
+    def forward(
+            self,
+            y_pred: torch.FloatTensor,
+            y_real: torch.FloatTensor,
+            sample_weight: torch.FloatTensor
+    ):
         """
         Get loss of the whole network
-        todo support weight
+        :param sample_weight:
         :param y_pred:
         :param y_real:
         :return:
         """
         return mtcnn_loss(
-            y_pred, y_real,
+            y_pred, y_real, sample_weight,
             self.w_detection,
             self.w_bbox,
             self.w_landmark
         )
 
 
-def mtcnn_loss(y_pred, y_real, w_detection: float, w_bbox: float, w_landmark: float):
+def mtcnn_loss(
+        y_pred: torch.FloatTensor,
+        y_real: torch.FloatTensor,
+        sample_weight: torch.FloatTensor,
+        detection_importance: float,
+        boundbox_importance: float,
+        landmark_importance: float
+):
     """
     Get loss of the whole network
     0:    face classification (need to +sigmoid -> BCELoss)
     1~4:  bbox
     5~14: landmark
-    todo support weight
-    :param y_pred:
-    :param y_real:
-    :param w_detection: weight of face detecation loss
-    :param w_bbox: weight of bound box regression loss
-    :param w_landmark: weight of landmark regression loss
+    :param sample_weight: vector size N
+    :param y_pred: Nx15 matrix
+    :param y_real: Nx15 matrix
+    :param detection_importance: weight of face detecation loss
+    :param boundbox_importance: weight of bound box regression loss
+    :param landmark_importance: weight of landmark regression loss
     :return:
     """
-    fc_loss = F.binary_cross_entropy(torch.sigmoid(y_pred[:, 0]), target=y_real[:, 0]) * w_detection
-    bb_loss = F.mse_loss(y_pred[:, 1:5], target=y_real[:, 1:5]) * 4 * w_bbox
-    lm_loss = F.mse_loss(y_pred[:, 5:15], target=y_real[:, 5:15]) * 10 * w_landmark
-    return fc_loss + bb_loss + lm_loss
+    fc_loss = F.binary_cross_entropy(F.sigmoid(y_pred[:, 0]), target=y_real[:, 0]) * detection_importance
+    bb_loss = F.mse_loss(y_pred[:, 1:5], target=y_real[:, 1:5]) * 4 * boundbox_importance
+    lm_loss = F.mse_loss(y_pred[:, 5:15], target=y_real[:, 5:15]) * 10 * landmark_importance
+    return (fc_loss + bb_loss + lm_loss) * sample_weight
 
 
 class PNet(nn.Module):
